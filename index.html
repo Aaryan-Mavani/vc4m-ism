@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Recorder</title>
+</head>
+<body>
+    <h1>Audio Recorder</h1>
+    <button id="recordButton">Start Recording</button>
+    <button id="stopButton" style="display: none;">Stop Recording</button>
+    <div id="status"></div>
+    <div id="response"></div>
+    <button id="playButton" style="display: none;">Play Speech</button>
+    <audio id="audioPlayer" controls style="display: none;"></audio>
+
+    <script>
+        let recording = false;
+        let recorder;
+
+        const recordButton = document.getElementById('recordButton');
+        const stopButton = document.getElementById('stopButton');
+        const statusDiv = document.getElementById('status');
+        const responseDiv = document.getElementById('response');
+        const playButton = document.getElementById('playButton');
+        const audioPlayer = document.getElementById('audioPlayer');
+
+        recordButton.addEventListener('click', async () => {
+            recordButton.disabled = true;
+            stopButton.style.display = 'inline-block';
+            statusDiv.innerText = 'Recording...';
+            responseDiv.innerText = '';
+            playButton.style.display = 'none';
+            audioPlayer.style.display = 'none';
+
+            const response = await fetch('/record/start', {
+                method: 'POST',
+            });
+
+            if (response.ok) {
+                recording = true;
+                recorder = setInterval(getResponse, 1000);
+            } else {
+                statusDiv.innerText = 'Failed to start recording.';
+                recordButton.disabled = false;
+                stopButton.style.display = 'none';
+            }
+        });
+
+        stopButton.addEventListener('click', async () => {
+            clearInterval(recorder);
+            recording = false;
+
+            stopButton.disabled = true;
+            statusDiv.innerText = 'Stopping...';
+
+            const response = await fetch('/record/stop', {
+                method: 'POST',
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                statusDiv.innerText = `Response: ${data.answer}`;
+                playButton.style.display = 'inline-block';
+            } else {
+                statusDiv.innerText = 'Failed to stop recording.';
+            }
+
+            recordButton.disabled = false;
+            stopButton.disabled = false;
+            stopButton.style.display = 'none';
+        });
+
+        async function getResponse() {
+            if (!recording) {
+                clearInterval(recorder);
+                return;
+            }
+
+            const response = await fetch('/record/response');
+            if (response.ok) {
+                const data = await response.json();
+                responseDiv.innerText = `API Response: ${data.answer}`;
+            }
+        }
+
+        playButton.addEventListener('click', () => {
+            audioPlayer.src = '/play';
+            audioPlayer.style.display = 'inline-block';
+        });
+    </script>
+</body>
+</html>
